@@ -16,6 +16,9 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "https://www.beautybariq.com",
   "https://beautybariq.com",
+  // Amplify's default domain for the dev/preview deployment (no custom
+  // domain attached yet) — see beautybariqUI's amplify app "main" branch.
+  "https://main.d31dutwtlsmxvx.amplifyapp.com",
 ];
 
 const app = express();
