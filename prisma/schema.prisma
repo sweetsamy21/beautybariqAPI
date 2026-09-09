@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Single ADMIN role — this site has no student/customer accounts (unlike
+// theaestheticequation.com's User model), just Gina and whoever else runs
+// the site day-to-day. Same field shape (cuid id, unique email, bcrypt
+// hash, isActive, timestamps) so the two admin systems stay a recognizably
+// consistent pattern.
+enum UserRole {
+  ADMIN
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         UserRole @default(ADMIN)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+// One row per public page, keyed by the page's own slug (not a separate
+// id) — "home", "about-us", "toxins", "filler", "facials", "morpheus",
+// "microneedling", "skincare", "iv-drips", "weight-management",
+// "sexual-wellness", "training", "payment-plans", "testimonials",
+// "privacy-policy". `data` is a loose JSON blob — shape is whatever each
+// page's own field config expects, not enforced here (mirrors
+// theaestheticequationAPI's PageContent model exactly). The UI merges
+// this over its own hardcoded defaults, so an unconfigured page renders
+// exactly as it always has.
+model PageContent {
+  id        String   @id
+  data      Json     @default("{}")
+  updatedAt DateTime @updatedAt
+
+  @@map("page_content")
+}
+
+model Location {
+  id           String   @id @default(cuid())
+  city         String
+  name         String
+  address      String
+  hours        String?
+  phone        String?
+  isActive     Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("locations")
+}
+
+model Testimonial {
+  id           String   @id @default(cuid())
+  name         String
+  quote        String
+  isActive     Boolean  @default(true)
+  displayOrder Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("testimonials")
+}
+
+// Singleton row (id always "site") — booking link/label, contact info,
+// social links, logo. "Appointment setup" for this phase means editing
+// bookingUrl/bookingLabel here; real booking still happens on the
+// external Jane App link, matching production today. Building an actual
+// in-app scheduler is a separate, later project.
+model SiteSettings {
+  id           String   @id @default("site")
+  bookingUrl   String   @default("https://grbeautybariq.janeapp.com")
+  bookingLabel String   @default("Book Now")
+  phone        String   @default("469-469-7024")
+  email        String   @default("gina@beautybariq.com")
+  instagramUrl String?  @default("http://instagram.com/beauty_bar_iq")
+  facebookUrl  String?  @default("https://www.facebook.com/grBeautyBarIQ")
+  logoUrl      String?
+  updatedAt    DateTime @updatedAt
+
+  @@map("site_settings")
+}
