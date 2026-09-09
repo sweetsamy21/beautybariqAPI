@@ -1,0 +1,54 @@
+service: beautybariq-api
+
+useDotenv: true
+
+plugins:
+  - serverless-esbuild
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    sourcemap: false
+    target: node20
+    platform: node
+    # @prisma/client has a special file structure esbuild can't inline-bundle
+    external:
+      - "@prisma/client"
+    packager: npm
+    packagerOptions:
+      # After npm install in build dir, copy the generated .prisma/client
+      # (prisma generate writes it to project root node_modules/.prisma — not an npm package)
+      scripts:
+        - "cp -r ../../node_modules/.prisma node_modules/"
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'prod'}
+  timeout: 29
+  memorySize: 512
+  environment:
+    NODE_ENV: production
+    DATABASE_URL: ${env:DATABASE_URL}
+    JWT_SECRET: ${env:JWT_SECRET}
+    S3_BUCKET_ASSETS: ${env:S3_BUCKET_ASSETS}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+          Resource:
+            - arn:aws:s3:::beautybariq-media-prod/*
+
+functions:
+  api:
+    handler: src/handler.handler
+    events:
+      - httpApi:
+          path: /api/{proxy+}
+          method: ANY

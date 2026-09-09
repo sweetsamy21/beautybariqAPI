@@ -2,5 +2,7 @@ node_modules
 dist
 .env
 config/.env.prod
+config/.env.lambda-dev
 *.tsbuildinfo
 .DS_Store
+.serverless
