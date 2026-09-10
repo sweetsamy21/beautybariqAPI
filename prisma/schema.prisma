@@ -1,5 +1,11 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" covers local dev on this machine (darwin-arm64); the Lambda
+  // deploy target needs its own binary explicitly listed or `prisma
+  // generate` only produces the engine for whatever OS ran it — exactly
+  // what caused deploys run from this Mac to 500 in prod (Lambda's
+  // Amazon Linux 2023 runtime couldn't find a matching query engine).
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -47,17 +53,28 @@ model PageContent {
   @@map("page_content")
 }
 
+// SERVICE = a real Beauty Bar IQ treatment location (Prosper, Midland).
+// TRAINING = Frisco — The Aesthetic Equation's training hub. Beauty Bar IQ
+// does not provide services there; the public site and lead forms must
+// never present a TRAINING location as somewhere a customer can book a
+// treatment (see /api/locations, which filters to SERVICE by default).
+enum LocationType {
+  SERVICE
+  TRAINING
+}
+
 model Location {
-  id           String   @id @default(cuid())
+  id           String       @id @default(cuid())
   city         String
   name         String
   address      String
   hours        String?
   phone        String?
-  isActive     Boolean  @default(true)
-  displayOrder Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  type         LocationType @default(SERVICE)
+  isActive     Boolean      @default(true)
+  displayOrder Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
   @@map("locations")
 }
@@ -79,6 +96,75 @@ model Testimonial {
 // bookingUrl/bookingLabel here; real booking still happens on the
 // external Jane App link, matching production today. Building an actual
 // in-app scheduler is a separate, later project.
+// A dedicated, SEO-addressable page per treatment (/services/[slug]) —
+// replaces the old pattern of one hardcoded route/component per service.
+// `isPriority` marks the 3 services the business wants SEO/conversion
+// effort concentrated on (Hormones, Weight Loss, Facial Balancing) so the
+// homepage/nav can feature them without a second hardcoded list.
+model Service {
+  id               String   @id @default(cuid())
+  slug             String   @unique
+  name             String
+  category         String?
+  shortDescription String
+  description      String[] @default([])
+  benefits         String[] @default([])
+  candidateInfo    String[] @default([])
+  whatToExpect     String[] @default([])
+  heroImage        String?
+  heroImagePosition String?
+  faqs             Json     @default("[]")
+  isPriority       Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  displayOrder     Int      @default(0)
+  seoTitle         String?
+  seoDescription   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("services")
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  APPOINTMENT_SCHEDULED
+  CONVERTED
+  LOST
+  ARCHIVED
+}
+
+// Marketing/contact leads only — never a store for clinical or PHI data
+// (see beautybariqAPI's README / admin copy: "message" is a free-text
+// note from the visitor, not a medical history field).
+model Lead {
+  id                String     @id @default(cuid())
+  firstName         String
+  lastName          String?
+  email             String
+  phone             String?
+  preferredLocation String?
+  serviceInterest   String?
+  productInterest   String?
+  message           String?
+  source            String?
+  landingPage       String?
+  utmSource         String?
+  utmMedium         String?
+  utmCampaign       String?
+  utmTerm           String?
+  utmContent        String?
+  referralUrl       String?
+  consent           Boolean    @default(false)
+  status            LeadStatus @default(NEW)
+  notes             String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@map("leads")
+}
+
 model SiteSettings {
   id           String   @id @default("site")
   bookingUrl   String   @default("https://grbeautybariq.janeapp.com")

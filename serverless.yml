@@ -34,6 +34,7 @@ provider:
     DATABASE_URL: ${env:DATABASE_URL}
     JWT_SECRET: ${env:JWT_SECRET}
     S3_BUCKET_ASSETS: ${env:S3_BUCKET_ASSETS}
+    SES_FROM: ${env:SES_FROM, 'gina@beautybariq.com'}
   iam:
     role:
       statements:
@@ -44,6 +45,11 @@ provider:
             - s3:DeleteObject
           Resource:
             - arn:aws:s3:::beautybariq-media-prod/*
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: "*"
 
 functions:
   api:

@@ -12,6 +12,7 @@ const locationSchema = z.object({
   address: z.string().min(1),
   hours: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
+  type: z.enum(["SERVICE", "TRAINING"]).optional(),
   isActive: z.boolean().optional(),
   displayOrder: z.number().int().optional(),
 });
