@@ -19,6 +19,7 @@ const VALID_PAGES = [
   "payment-plans",
   "testimonials",
   "privacy-policy",
+  "terms-and-conditions",
 ] as const;
 
 router.get("/:page", async (req: Request, res: Response) => {

@@ -23,6 +23,7 @@ const VALID_PAGES = [
   "payment-plans",
   "testimonials",
   "privacy-policy",
+  "terms-and-conditions",
 ] as const;
 type PageId = (typeof VALID_PAGES)[number];
 
