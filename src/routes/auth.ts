@@ -2,7 +2,8 @@ import { Router, Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
-import { signToken, getTokenFromRequest, verifyToken } from "../lib/auth";
+import { signToken, getTokenFromRequest, verifyToken, requireAuth } from "../lib/auth";
+import { errStatus } from "../lib/errors";
 
 const router = Router();
 
@@ -54,6 +55,40 @@ router.post("/login", async (req: Request, res: Response) => {
 router.post("/logout", (_req: Request, res: Response) => {
   res.cookie("token", "", { maxAge: 0, path: "/" });
   return res.json({ success: true });
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+router.post("/change-password", async (req: Request, res: Response) => {
+  try {
+    const payload = requireAuth(req);
+    const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+    if (!user || !user.isActive) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      return res.status(400).json({ success: false, error: "Current password is incorrect." });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+
+    return res.json({ success: true });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return res.status(400).json({ success: false, error: "Invalid input", details: err.issues });
+    }
+    const msg = err instanceof Error ? err.message : "Internal server error";
+    console.error("[POST /api/auth/change-password]", err);
+    return res.status(errStatus(msg)).json({ success: false, error: msg });
+  }
 });
 
 router.get("/me", (req: Request, res: Response) => {
